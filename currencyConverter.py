@@ -1,13 +1,37 @@
 from tkinter import *
 from tkinter import messagebox
-from PIL import ImageTk, Image
+import requests
+import json
+#from PIL import ImageTk, Image
 
-root = Tk()
-root.title("Currency Converter Calculator")
-root.geometry("500x350")
-root.configure(bg = "gray18")
+
 
 #I--------------functions----------------I
+
+#I---------------API function------------I
+
+
+def findRate(baseCurrency, targetCurrency):
+
+    if baseCurrency == targetCurrency:
+        messagebox.showerror("error", errorMessage["currency"])
+
+    else:
+
+        #url = 'https://v6.exchangerate-api.com/v6/--APIKEYHERE--/pair/EUR/GBP'
+
+        #building the URL
+        currencyFormat = baseCurrency + '/' + targetCurrency
+        url = 'https://v6.exchangerate-api.com/v6/--APIKEYHERE--/pair/' + currencyFormat
+
+        # Making a request
+        response = requests.get(url)
+        data = response.json()
+
+        # JSON object
+        rate = (data['conversion_rate'])
+        return rate
+
 
 #I---------Validation functions----------I
 
@@ -15,21 +39,20 @@ def validate():
 # main validation function does all validation checks one after the other
 # returning if one error is triggered to stop multiple errorboxes displaying
 # at once or the convert function going ahead.
+
     #retrieve what is entered in the fields
     amount = amountE.get()
-    rate = rateE.get()
 
     #validation
-    if presenceValidation(amount, rate) == True:
+    if presenceValidation(amount) == True:
         if typeValidation(amount) == True:
-            if rateValidation(rate) == True:
-                if formatValidation(amount) == True:
-                    if boundaryValidation(amount) == True:
-                        return True
+            if formatValidation(amount) == True:
+                if boundaryValidation(amount) == True:
+                    return True
 
 #I------other validation functions-------I
-def presenceValidation(x, y):
-    if not len(x) or not len(y) > 0:
+def presenceValidation(x):
+    if not len(x) > 0:
         messagebox.showerror("error", errorMessage["presence"])
         return False
     else:
@@ -45,18 +68,6 @@ def typeValidation(x):
         ##valid = "false"
         return False
 
-
-def rateValidation(y):
-    try:
-        y = float(y)
-        if y > 0:
-            return True
-        else:
-            messagebox.showerror("error", errorMessage["exchange"])
-            return False
-    except:
-        messagebox.showerror("error", errorMessage["exchange"])
-        return False
 
 def formatValidation(x):
     if len(x.rsplit('.')[-1]) != 2:
@@ -85,86 +96,110 @@ def clear():
     rateE.delete(0, END)
 
 #gets correct symbols -- NOT WORKING YET
-def symbolSelect():
+#def symbolSelect(event):
     #retrieve what is entered in the fields
-    currencyFrom = drop1.get()
-    currencyTo = drop2.get()
+#    currencyFrom = currency[drop1.get()]
+#    currencyTo = currency[drop2.get()]
 
-# main conversion function -- NOT WORKING YET
+
+# main conversion function
 def convert():
     if validate() == True:
         #casting strings to floats
         amount = float(amountE.get())
-        rate = float(rateE.get())
+        #rate = float(rateE.get())
+        rate = findRate(drop1.get(), drop2.get())
         #calculate the currency conversion
         conversion = amount*rate
         #format the outputs to 2 decimal places
         amount = "{:.2f}".format(amount)
         conversion = "{:.2f}".format(conversion)
+        #getting the currency symbols
+        currencyFrom = currency[drop1.get()]
+        currencyTo = currency[drop2.get()]
         #display the result
-        calc["text"] = "Original amount: " + str(amount) + " \n Here be the calculation! " + str(conversion)
+        output = "Original amount: " + currencyFrom + str(amount) + " \n Calculation: " + currencyTo + str(conversion)
+        calc["text"] = output
 
 
 
 
 
 #I----------lists and dictionaries--------------I
-symbols = ["£", "€", "¥", "$"]
-currency = ["GBP", "EUR", "JPY", "USD"]
+#symbols = ["£", "€", "¥", "$"]
+currency = {
+    "GBP" :"£",
+    "EUR": "€",
+    "JPY": "¥",
+    "USD": "$"
+}
+
 flags =["", ""]
+
 errorMessage = {
-  "presence":   "Fields cannot be left blank",
-  "type":       "Amount to convert must be a number with two decimal places, eg. 10.60.",
-  "boundary":   "Amount to convert must be larger than 0.00 and smaller than 1000000.00.",
-  "exchange":   "Exchange rate must be a number larger than 0"
+    "presence":   "Fields cannot be left blank",
+    "type":       "Amount to convert must be a number with two decimal places, eg. 10.60.",
+    "boundary":   "Amount to convert must be larger than 0.00 and smaller than 1000000.00.",
+    "exchange":   "Exchange rate must be a number larger than 0",
+    "currency":   "Currency error. Currency to convert to must be different to the base currency"
 }
 
 
-
-
+#I----------------GUI Set-up------------------I
+root = Tk()
+root.title("Currency Converter Calculator")
+root.geometry("500x300")
+root.configure(bg = "gray18")
+frame = Frame(root)
+frame.configure(bg = "gray18")
+frame.place(relx = 0.5, rely = 0.5, anchor = CENTER)
 #I-----------------Gui widgets---------------I
 
 #input fields
-amountE = Entry(root, width = 10,
+amountE = Entry(frame, width = 10,
                       bg = "gray25",
                       fg = "snow",
                       font = ("Helvetica Neue", 22))
 
-rateE = Entry(root, width = 10,
+"""rateE = Entry(frame, width = 10,
                     bg = "gray25",
                     fg = "snow",
                     font = ("Helvetica Neue", 22))
-
+"""
 #dropdown menus
 drop1 = StringVar()
-drop1.set(currency[0])
-currencydrop1 = OptionMenu(root, drop1, *currency)
+drop1.set(list(currency)[0])
+#drop1.set(currency[0])
+currencydrop1 = OptionMenu(frame, drop1, *currency,) #command = symbolSelect)
 currencydrop1.configure(bg = "gray25",
                         fg = "snow",
+                        height = 1,
                         font = ("Helvetica Neue", 22))
 
 drop2 = StringVar()
-drop2.set(currency[1])
-currencydrop2 = OptionMenu(root, drop2, *currency)
+drop2.set(list(currency)[1])
+#drop2.set(currency[1])
+currencydrop2 = OptionMenu(frame, drop2, *currency,) #command = symbolSelect)
 currencydrop2.configure(bg = "gray25",
                         fg = "snow",
+                        height = 1,
                         font = ("Helvetica Neue", 22))
 
 # Labels
-calc = Label(root, bg = "slateblue3",
+calc = Label(frame, bg = "slateblue3",
                     fg = "snow",
                     font = ("Helvetica Neue", 22))
 calc.configure(borderwidth = 2, height = 4, width = 30, relief="ridge")
 
 
-rateLabel = Label(root, text = "Rate",
+rateLabel = Label(frame, text = "Rate",
                         bg = "gray18",
                         fg = "snow",
                         padx = 40,
                         pady = 20,
                         font = ("Helvetica Neue", 22))
 
-toLabel = Label(root, text = "to",
+toLabel = Label(frame, text = "to",
                       bg = "gray18",
                       fg = "snow",
                       padx = 10,
@@ -173,7 +208,7 @@ toLabel = Label(root, text = "to",
 
 
 #Buttons
-convertButton = Button(root, text = "Convert",
+convertButton = Button(frame, text = "Convert",
                              bg = "snow",
                              fg = "gray18",
                              font = ("Helvetica Neue", 22),
@@ -182,7 +217,7 @@ convertButton = Button(root, text = "Convert",
                              command = convert)
 
 
-clearButton = Button(root, text = "Clear",
+clearButton = Button(frame, text = "Clear",
                            bg = "snow",
                            fg = "gray18",
                            font = ("Helvetica Neue", 22),
@@ -191,7 +226,7 @@ clearButton = Button(root, text = "Clear",
                            command = clear)
 
 
-closeButton = Button(root, text = "Close",
+closeButton = Button(frame, text = "Close",
                            bg = "snow",
                            fg = "gray18",
                            font = ("Helvetica Neue", 22),
@@ -203,19 +238,20 @@ closeButton = Button(root, text = "Close",
 
 #I---------------GUI grid layout----------------I
 
-amountE.grid(row = 0,column = 0)
-currencydrop1.grid(row = 0,column = 1)
-toLabel.grid(row = 0,column = 2)
-currencydrop2.grid(row = 0,column = 3)
+amountE.grid(row = 0, column = 0)
+currencydrop1.grid(row = 0, column = 1)
+toLabel.grid(row = 0, column = 2, padx = 30, pady = 30)
+currencydrop2.grid(row = 0, column = 3)
 
-rateLabel.grid(row = 1,column = 0)
-rateE.grid(row = 1,column = 1)
-convertButton.grid(row = 1,column = 2, columnspan = 2)
+#rateLabel.grid(row = 1, column = 0)
+#rateE.grid(row = 1, column = 1)
 
-calc.grid(row = 2,column = 0, columnspan = 4)
 
-clearButton.grid(row = 3,column = 0)
-closeButton.grid(row = 3,column = 2)
+calc.grid(row = 2, column = 0, columnspan = 4, pady = (0, 10))
+
+clearButton.grid(row = 3, column = 0)
+convertButton.grid(row = 3, column = 1, columnspan = 2, pady = 25)
+closeButton.grid(row = 3, column = 3)
 
 
 root.mainloop()
